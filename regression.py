@@ -1,6 +1,13 @@
-import numpy
+import numpy as np
 import pandas as pd
 import quandl
+import math
+from sklearn import preprocessing, cross_validation, svm
+from sklearn.linear_model.base import LinearRegression
+
+# Some global inputs to play with
+forecast_col = 'Adj. Close'
+percent_forecast = 0.01
 
 # data frame: google stock ticker
 df = quandl.get('WIKI/GOOGL')
@@ -15,4 +22,39 @@ df['PCT_change'] = (df['Adj. Close'] - df['Adj. Open']) / df['Adj. Open'] * 100.
 # our tailored dataset
 df = df[['Adj. Close', 'HL_PCT', 'PCT_change', 'Adj. Volume']]
 
-print(df.head())
+# it's wise not to have NaN's
+df.fillna(-99999, inplace=True)
+
+# look ahead at 1% of the length of the dataset
+forecast_out = int(math.ceil(percent_forecast * len(df)))
+df['label'] = df[forecast_col].shift(-forecast_out)
+df.dropna(inplace=True)
+
+# features: everything except label column
+X = np.array(df.drop(['label'], 1))
+
+# labels
+y = np.array(df['label'])
+
+# skip if doing high-frequency trading.
+# all data results need to be scaled too
+X = preprocessing.scale(X)
+df.dropna(inplace=True)
+
+y = np.array(df['label'])
+
+"""
+This next section jumbles the rows, but keeps the relationship between X and y.
+This is so that we can train the linearRegression model, and then test it on different
+data so that we know that it is now able to get the answers right!
+"""
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size=0.2)
+
+# Create and train a classifier
+clf = LinearRegression()
+# training data
+clf.fit(X_train, y_train)
+# test the data
+accuracy = clf.score(X_test, y_test)
+prediction = clf.predict(X)
+print(prediction)
