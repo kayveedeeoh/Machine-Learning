@@ -51,10 +51,9 @@ data so that we know that it is now able to get the answers right!
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size=0.2)
 
 # Create and train a classifier
-clf = LinearRegression()
+clf = LinearRegression(n_jobs=-1)
 # training data
 clf.fit(X_train, y_train)
 # test the data
 accuracy = clf.score(X_test, y_test)
-prediction = clf.predict(X)
-print(prediction)
+print(accuracy)
