@@ -2,15 +2,21 @@ import numpy as np
 import pandas as pd
 import quandl
 import math
+import datetime
 from sklearn import preprocessing, cross_validation, svm
 from sklearn.linear_model.base import LinearRegression
+import matplotlib.pyplot as plt
+from matplotlib import style
+
+style.use('ggplot')
 
 # Some global inputs to play with
 forecast_col = 'Adj. Close'
 percent_forecast = 0.01
 
-# data frame: google stock ticker
+# data frame (dataset): google stock ticker
 df = quandl.get('WIKI/GOOGL')
+print(df.tail())
 
 df = df[['Adj. Open', 'Adj. High', 'Adj. Low', 'Adj. Close', 'Adj. Volume', ]]
 
@@ -28,19 +34,18 @@ df.fillna(-99999, inplace=True)
 # look ahead at 1% of the length of the dataset
 forecast_out = int(math.ceil(percent_forecast * len(df)))
 df['label'] = df[forecast_col].shift(-forecast_out)
-df.dropna(inplace=True)
 
 # features: everything except label column
 X = np.array(df.drop(['label'], 1))
 
-# labels
-y = np.array(df['label'])
-
-# skip if doing high-frequency trading.
+# skip scaling if doing high-frequency trading(slow).
 # all data results need to be scaled too
 X = preprocessing.scale(X)
+X_lately = X[-forecast_out:]
+X = X[:-forecast_out]
 df.dropna(inplace=True)
 
+# labels
 y = np.array(df['label'])
 
 """
@@ -56,4 +61,28 @@ clf = LinearRegression(n_jobs=-1)
 clf.fit(X_train, y_train)
 # test the data
 accuracy = clf.score(X_test, y_test)
-print(accuracy)
+
+# predict future <forecast_col> values
+forecast_set = clf.predict(X_lately)
+df['Forecast'] = np.nan
+
+# set up dates to use on the graph
+last_date = df.iloc[-1].name
+last_unix = last_date.timestamp()
+one_day = 86400
+next_unix = last_unix + one_day
+
+for i in forecast_set:
+    next_date = datetime.datetime.fromtimestamp(next_unix)
+    next_unix += one_day
+    df.loc[next_date] = [np.nan for _ in range(len(df.columns) - 1)] + [i]
+
+# plot it
+df['Adj. Close'].plot()
+df['Forecast'].plot()
+plt.legend(loc=4)
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.show()
+
+# TODO: There's currently an issue where the forecast isnt future data. it's the last bit of the dataset.
