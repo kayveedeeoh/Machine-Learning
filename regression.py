@@ -8,13 +8,15 @@ from sklearn.linear_model.base import LinearRegression
 import matplotlib.pyplot as plt
 from matplotlib import style
 
+# TODO: There's currently an issue where the forecast isn't future data. it's the last bit of the dataset.
+
 style.use('ggplot')
 
 # Some global inputs to play with
 forecast_col = 'Adj. Close'
 percent_forecast = 0.01
 
-# data frame (dataset): google stock ticker
+# data frame/dataset: google stock ticker
 df = quandl.get('WIKI/GOOGL')
 print(df.tail())
 
@@ -39,7 +41,6 @@ df['label'] = df[forecast_col].shift(-forecast_out)
 X = np.array(df.drop(['label'], 1))
 
 # skip scaling if doing high-frequency trading(slow).
-# all data results need to be scaled too
 X = preprocessing.scale(X)
 X_lately = X[-forecast_out:]
 X = X[:-forecast_out]
@@ -64,6 +65,7 @@ accuracy = clf.score(X_test, y_test)
 
 # predict future <forecast_col> values
 forecast_set = clf.predict(X_lately)
+
 df['Forecast'] = np.nan
 
 # set up dates to use on the graph
@@ -84,5 +86,3 @@ plt.legend(loc=4)
 plt.xlabel('Date')
 plt.ylabel('Price')
 plt.show()
-
-# TODO: There's currently an issue where the forecast isnt future data. it's the last bit of the dataset.
